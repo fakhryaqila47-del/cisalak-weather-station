@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#071b2b">
+<title>Cisalak Weather Station — by Fakhry Aqila Fikri</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
+:root{
+ --bg:#071827;--panel:rgba(15,39,56,.78);--panel2:rgba(19,49,68,.7);--line:rgba(176,218,231,.13);
+ --text:#edf8fb;--muted:#9bb5c1;--cyan:#62d7d0;--blue:#74bdf4;--gold:#ffc979;--green:#8de0b4;
+ --danger:#ff9b87;--radius:22px;--shadow:0 24px 70px rgba(0,0,0,.25)
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden}
+button,input,select{font:inherit}
+button{cursor:pointer}
+.bg{position:fixed;inset:0;z-index:-3;background:radial-gradient(ellipse at 15% 0%,#1d5263 0,transparent 42%),radial-gradient(ellipse at 100% 40%,#173d5c 0,transparent 38%),linear-gradient(145deg,#071827,#0b2334 60%,#071827)}
+.bg:after{content:"";position:absolute;inset:0;opacity:.16;background-image:linear-gradient(rgba(170,220,230,.09) 1px,transparent 1px),linear-gradient(90deg,rgba(170,220,230,.09) 1px,transparent 1px);background-size:48px 48px;mask-image:linear-gradient(to bottom,black,transparent 80%)}
+.glow{position:fixed;z-index:-2;width:420px;height:420px;border-radius:50%;filter:blur(100px);opacity:.15;pointer-events:none;animation:floatGlow 16s ease-in-out infinite alternate}
+.glow.a{background:#39d4c5;top:10%;left:-220px}.glow.b{background:#4d8bd6;right:-240px;bottom:0;animation-delay:-8s}
+@keyframes floatGlow{to{transform:translate(100px,80px) scale(1.15)}}
+.wrap{width:min(1260px,calc(100% - 36px));margin:auto;padding:26px 0 42px;animation:pageIn .8s ease both}
+@keyframes pageIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+header{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:24px}
+#weatherCanvas{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:.78}
+.weather-controls{margin-top:12px;padding:15px 18px;display:flex;align-items:center;justify-content:space-between;gap:14px}
+.weather-control-copy{display:flex;flex-direction:column;gap:4px;min-width:180px}
+.weather-control-copy strong{font:600 13px Outfit,sans-serif;color:#eafcff}
+.weather-control-copy span{font-size:10px;color:var(--muted);line-height:1.5}
+.weather-buttons{display:flex;flex-wrap:wrap;gap:7px;justify-content:flex-end}
+.weather-btn{border:1px solid var(--line);border-radius:11px;background:#102d40;color:#b9d1d9;padding:9px 11px;font-size:10px;transition:transform .2s,background .2s,border-color .2s,color .2s}
+.weather-btn:hover{transform:translateY(-2px);border-color:#62d7d088;color:white}
+.weather-btn.active{background:linear-gradient(135deg,#236477,#1d5366);border-color:#62d7d088;color:#eaffff;box-shadow:0 0 18px #62d7d01c}
+.weather-btn.pause-btn{background:#273849}
+@media(max-width:760px){.weather-controls{align-items:flex-start;flex-direction:column}.weather-buttons{justify-content:flex-start}}
+
+.brand{display:flex;align-items:center;gap:13px}
+.brand-icon{width:48px;height:48px;border-radius:16px;display:grid;place-items:center;background:linear-gradient(145deg,#6ce0d0,#6bb7ee);color:#082638;font-size:24px;box-shadow:0 8px 30px #49cfc044}
+.brand h1{font:700 23px/1.05 Outfit,sans-serif;margin:0;letter-spacing:-.4px}
+.brand p{margin:5px 0 0;color:var(--muted);font-size:11px;letter-spacing:.2px}
+.header-actions{display:flex;align-items:center;gap:10px}
+.pill{display:flex;align-items:center;gap:8px;padding:9px 13px;border:1px solid var(--line);border-radius:30px;background:#102d40aa;color:#d5e8ef;font-size:11px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--gold);box-shadow:0 0 0 4px #ffc9791e}
+.dot.live{background:var(--green);box-shadow:0 0 0 4px #8de0b41e;animation:pulse 2s infinite}
+@keyframes pulse{50%{box-shadow:0 0 0 8px transparent}}
+.btn{border:1px solid var(--line);border-radius:13px;background:#16384c;color:var(--text);padding:10px 13px;font-size:12px;transition:.2s}
+.btn:hover{transform:translateY(-2px);border-color:#65d8d099;background:#1a4658}
+.btn.primary{background:linear-gradient(135deg,#75ded1,#83c7ee);border:0;color:#082638;font-weight:700}
+.hero{position:relative;overflow:hidden;border:1px solid #9cd9df24;border-radius:30px;padding:30px;background:linear-gradient(115deg,rgba(21,67,79,.92),rgba(13,43,62,.9) 55%,rgba(20,52,73,.88));box-shadow:var(--shadow)}
+.hero:before{content:"";position:absolute;width:440px;height:440px;right:-110px;top:-260px;border-radius:50%;border:1px solid #a9e4e322;box-shadow:0 0 0 35px #a9e4e208,0 0 0 75px #a9e4e206}
+.hero:after{content:"";position:absolute;width:260px;height:260px;right:8%;bottom:-220px;border-radius:50%;background:#53d3c5;filter:blur(80px);opacity:.15}
+.hero-top{display:flex;justify-content:space-between;align-items:center;gap:15px;position:relative;z-index:1}
+.eyebrow{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#9dc9d3;font-weight:700}
+.updated{font:10px 'DM Mono',monospace;color:#a9c5ce}
+.hero-main{display:grid;grid-template-columns:1fr;gap:20px;align-items:center;position:relative;z-index:1;padding:35px 0 12px}
+.station-label{color:#c3e6e8;font-size:13px;display:flex;gap:8px;align-items:center}
+h2.hero-title{font:600 clamp(36px,5vw,60px)/.98 Outfit,sans-serif;letter-spacing:-2px;margin:15px 0 12px}
+.hero-desc{max-width:570px;color:#b5d0d7;font-size:13px;line-height:1.75;margin:0}
+.hero-foot{display:flex;flex-wrap:wrap;gap:9px;margin-top:23px}
+.tag{padding:7px 10px;border:1px solid #b6e7e326;border-radius:30px;background:#ffffff08;color:#c9e5e9;font-size:10px}
+}}}
+.section{margin-top:22px}
+.section-head{display:flex;justify-content:space-between;align-items:end;gap:15px;margin:0 2px 13px}
+.section-head h3{font:600 18px Outfit,sans-serif;margin:0}
+.section-head p{font-size:11px;color:var(--muted);margin:5px 0 0}
+.grid{display:grid;gap:13px}
+.metrics{grid-template-columns:repeat(4,1fr)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:0 12px 35px #00000012;backdrop-filter:blur(14px);transition:transform .25s,border-color .25s,background .25s}
+.card:hover{transform:translateY(-4px);border-color:#6bd8d044;background:#15394dcc}
+.metric{padding:18px;min-height:132px;position:relative;overflow:hidden}
+.metric:after{content:"";position:absolute;width:90px;height:90px;border-radius:50%;right:-35px;bottom:-48px;background:var(--tint,#62d7d0);filter:blur(35px);opacity:.22}
+.metric-top{display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-size:11px}
+.metric-icon{width:31px;height:31px;border-radius:10px;display:grid;place-items:center;background:#ffffff0c;font-size:16px}
+.metric-value{font:600 28px Outfit,sans-serif;margin-top:15px;letter-spacing:-.7px}
+.metric-unit{font:400 12px 'DM Sans',sans-serif;color:#a8c2cc;margin-left:3px}
+.metric-note{font-size:10px;color:#89a9b5;margin-top:4px}
+.charts{grid-template-columns:1.2fr .8fr}
+.chart-card{padding:20px;min-width:0}
+.chart-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:13px}
+.chart-head h3{font:600 16px Outfit,sans-serif;margin:0}
+.chart-head p{font-size:10px;color:var(--muted);margin:5px 0 0}
+.select{background:#14364a;color:#d9edf2;border:1px solid var(--line);border-radius:10px;padding:8px;font-size:10px;outline:none}
+.chart-wrap{height:220px;position:relative}
+canvas{width:100%;height:100%;display:block}
+.chart-legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;color:var(--muted);font-size:10px}
+.legend-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;background:var(--cyan)}
+.season-note{margin-top:12px;padding:11px 13px;border-radius:13px;background:#ffffff08;color:#a9c5ce;font-size:10px;line-height:1.6}
+.season-switch{display:flex;gap:6px;padding:4px;border:1px solid var(--line);border-radius:12px;background:#071e2c}
+.season-switch button{border:0;background:transparent;color:#9bb5c1;padding:7px 10px;border-radius:8px;font-size:10px}
+.season-switch button.active{background:#235469;color:#eaffff}
+.sensors{grid-template-columns:repeat(4,1fr)}
+.sensor{padding:17px;min-height:155px}
+.sensor-head{display:flex;align-items:center;gap:10px;margin-bottom:11px}
+.sensor-symbol{width:35px;height:35px;display:grid;place-items:center;border-radius:11px;background:#ffffff0c;font-size:18px}
+.sensor h4{font-size:12px;margin:0;font-weight:600}
+.sensor small{display:block;color:#85a9b6;font-size:9px;margin-top:3px}
+.sensor p{color:#a9c2cc;font-size:10px;line-height:1.6;margin:0}
+.sensor .role{display:inline-block;color:#80d8cb;font-size:9px;margin-top:9px}
+.architecture{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.info-card{padding:20px}
+.info-card h3{font:600 16px Outfit,sans-serif;margin:0 0 12px}
+.info-card p,.info-card li{color:#a9c2cc;font-size:11px;line-height:1.75}
+.info-card ul{padding-left:17px;margin:8px 0 0}
+.flow{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:16px}
+.flow-node{flex:1;text-align:center;padding:12px 5px;border:1px solid #a2dce022;border-radius:12px;background:#ffffff08;font-size:10px;color:#cce8ed}
+.flow-node strong{display:block;font-size:12px;color:#e9fbff;margin-bottom:4px}
+.flow-arrow{color:#65d7cb}
+.status-list{display:grid;gap:9px}
+.status-row{display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid var(--line);padding-bottom:8px;font-size:10px;color:#a9c2cc}
+.status-row strong{font:10px 'DM Mono',monospace;color:#e4f5f7;text-align:right}
+.disclaimer{padding:13px 15px;border:1px solid #ffc97930;background:#ffc9790b;border-radius:14px;color:#d8c49e;font-size:10px;line-height:1.65;margin-top:13px}
+footer{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;color:#7897a5;font-size:10px;padding:20px 3px 0}
+.toast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,20px);opacity:0;pointer-events:none;background:#17384a;border:1px solid var(--line);padding:12px 17px;border-radius:12px;box-shadow:var(--shadow);font-size:11px;transition:.25s;z-index:10}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+@media(max-width:950px){.metrics,.sensors{grid-template-columns:repeat(2,1fr)}.charts{grid-template-columns:1fr}}
+@media(max-width:650px){.wrap{width:calc(100% - 20px);padding-top:15px}.brand h1{font-size:19px}.brand-icon{width:42px;height:42px}.header-actions .pill{display:none}.hero{padding:21px}.hero-main{grid-template-columns:1fr;padding-top:28px}h2.hero-title{font-size:43px;max-width:290px}.hero-desc{max-width:330px}.metrics{gap:8px}.metric{padding:13px;min-height:120px}.metric-value{font-size:24px}.sensor{padding:13px}.architecture{grid-template-columns:1fr}.flow{flex-wrap:wrap}.flow-node{min-width:27%}.section-head{align-items:flex-start;flex-direction:column}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<div class="bg"></div><div class="glow a"></div><div class="glow b"></div>
+<div class="wrap">
+<header>
+ <div class="brand"><div class="brand-icon">⌁</div><div><h1>Cisalak Weather Station</h1><p>by Fakhry Aqila Fikri</p></div></div>
+ <div class="header-actions">
+  <div class="pill"><span class="dot" id="statusDot"></span><span id="connectionLabel">MODE DEMO</span></div>
+  <button class="btn" id="refreshBtn">↻ Perbarui</button>
+ </div>
+</header>
+
+<section class="hero" id="weatherHero">
+ <canvas id="weatherCanvas" aria-hidden="true"></canvas>
+ <div class="hero-top"><div class="eyebrow">LOCAL IOT WEATHER MONITORING</div><div class="updated" id="lastUpdate">MENUNGGU DATA</div></div>
+ <div class="hero-main">
+  <div>
+   <div class="station-label">⌖ <span id="stationLocation">Cisalak · Lokasi stasiun</span></div>
+   <h2 class="hero-title">Cuaca lokal,<br>terpantau langsung.</h2>
+   <p class="hero-desc">Stasiun cuaca mandiri berbasis ESP32 yang dirancang untuk memantau kondisi atmosfer di sekitar wilayah Cisalak. Data berasal dari sensor di lokasi stasiun, bukan hanya prakiraan cuaca wilayah yang luas.</p>
+   <div class="hero-foot"><span class="tag">ESP32 DEVKIT V3</span><span class="tag">Pemantauan mikroklimat</span><span class="tag">IoT Weather Station</span></div>
+  </div>
+ </div>
+</section>
+<section class="weather-controls card" aria-label="Kontrol animasi cuaca">
+ <div class="weather-control-copy">
+  <strong>Live Weather Atmosphere</strong>
+  <span>Pilih suasana cuaca untuk melihat animasi lingkungan secara langsung.</span>
+ </div>
+ <div class="weather-buttons">
+  <button class="weather-btn active" data-weather="rain">🌧 Hujan</button>
+  <button class="weather-btn" data-weather="storm">⚡ Badai</button>
+  <button class="weather-btn" data-weather="sunny">☀ Cerah</button>
+  <button class="weather-btn" data-weather="cloudy">☁ Berawan</button>
+  <button class="weather-btn" data-weather="windy">💨 Berangin</button>
+  <button class="weather-btn pause-btn" id="pauseWeather">Ⅱ Jeda</button>
+ </div>
+</section>
+
+<section class="section">
+ <div class="section-head"><div><h3>Ringkasan kondisi lingkungan</h3><p>Nilai sensor terbaru yang diterima dashboard</p></div><span class="updated" id="sampleAge">DATA CONTOH</span></div>
+ <div class="grid metrics">
+  <article class="card metric" style="--tint:#ffc979"><div class="metric-top">Suhu udara <span class="metric-icon">🌡️</span></div><div class="metric-value" id="temperature">--<span class="metric-unit">°C</span></div><div class="metric-note">BME280 · temperatur sekitar</div></article>
+  <article class="card metric" style="--tint:#62d7d0"><div class="metric-top">Kelembapan <span class="metric-icon">💧</span></div><div class="metric-value" id="humidity">--<span class="metric-unit">%</span></div><div class="metric-note">BME280 · kelembapan relatif</div></article>
+  <article class="card metric" style="--tint:#74bdf4"><div class="metric-top">Tekanan udara <span class="metric-icon">◉</span></div><div class="metric-value" id="pressure">--<span class="metric-unit">hPa</span></div><div class="metric-note">BME280 · tekanan atmosfer</div></article>
+  <article class="card metric" style="--tint:#78dba5"><div class="metric-top">Curah hujan hari ini <span class="metric-icon">🌧️</span></div><div class="metric-value" id="rainToday">--<span class="metric-unit">mm</span></div><div class="metric-note">Tipping bucket rain gauge</div></article>
+  <article class="card metric" style="--tint:#74bdf4"><div class="metric-top">Kecepatan angin <span class="metric-icon">💨</span></div><div class="metric-value" id="windSpeed">--<span class="metric-unit">m/s</span></div><div class="metric-note">Anemometer</div></article>
+  <article class="card metric" style="--tint:#ffc979"><div class="metric-top">Arah angin <span class="metric-icon">🧭</span></div><div class="metric-value" id="windDirection">--<span class="metric-unit">°</span></div><div class="metric-note">Wind vane</div></article>
+  <article class="card metric" style="--tint:#c19bff"><div class="metric-top">PM2.5 <span class="metric-icon">◌</span></div><div class="metric-value" id="pm25">--<span class="metric-unit">µg/m³</span></div><div class="metric-note">PMS5003 · partikulat halus</div></article>
+  <article class="card metric" style="--tint:#ffc979"><div class="metric-top">Intensitas cahaya <span class="metric-icon">☀️</span></div><div class="metric-value" id="lux">--<span class="metric-unit">lux</span></div><div class="metric-note">BH1750 · intensitas penerangan</div></article>
+ </div>
+</section>
+
+<section class="section">
+ <div class="section-head"><div><h3>Analisis tren cuaca harian</h3><p>Grafik historis untuk membaca perubahan kondisi dari hari ke hari</p></div>
+  <div class="season-switch" role="group" aria-label="Pilih musim"><button id="rainMode" class="active">Musim hujan</button><button id="dryMode">Musim kemarau</button></div>
+ </div>
+ <div class="grid charts">
+  <article class="card chart-card">
+   <div class="chart-head"><div><h3 id="chartTitle">Curah hujan harian</h3><p id="chartSubtitle">Akumulasi hujan per hari · 7 hari terakhir</p></div><select class="select" id="periodSelect" aria-label="Periode grafik"><option value="7">7 hari</option><option value="14">14 hari</option></select></div>
+   <div class="chart-wrap"><canvas id="mainChart" aria-label="Grafik tren cuaca"></canvas></div>
+   <div class="chart-legend"><span><i class="legend-dot" id="mainLegendDot"></i><span id="mainLegend">Curah hujan (mm)</span></span></div>
+   <div class="season-note" id="seasonNote">Musim hujan: grafik menampilkan akumulasi curah hujan harian dari tipping bucket rain gauge.</div>
+  </article>
+  <article class="card chart-card">
+   <div class="chart-head"><div><h3>Kondisi atmosfer</h3><p>Perubahan parameter lingkungan</p></div><span class="tag" id="secondaryUnit">°C</span></div>
+   <div class="chart-wrap"><canvas id="secondaryChart" aria-label="Grafik kondisi atmosfer"></canvas></div>
+   <div class="chart-legend"><span><i class="legend-dot" style="background:#ffc979"></i><span id="secondaryLegend">Suhu udara (°C)</span></span></div>
+   <div class="season-note" id="secondaryNote">Suhu harian membantu melihat pola perubahan kondisi lokal.</div>
+  </article>
+ </div>
+</section>
+
+<section class="section">
+ <div class="section-head"><div><h3>Perangkat & sensor pemantauan</h3><p>Komponen yang membentuk sistem stasiun cuaca mandiri</p></div><span class="tag">HARDWARE PROFILE</span></div>
+ <div class="grid sensors">
+  <article class="card sensor"><div class="sensor-head"><div class="sensor-symbol">🧠</div><div><h4>ESP32 DEVKIT V3</h4><small>Mikrokontroler utama</small></div></div><p>Otak stasiun yang membaca sensor, mengolah data, memberi timestamp, lalu mengirimkan data melalui Wi-Fi.</p><span class="role">PUSAT KENDALI IoT</span></article>
+  <article class="card sensor"><div class="sensor-head"><div class="sensor-symbol">🌡️</div><div><h4>BME280 Module</h4><small>Suhu · kelembapan · tekanan</small></div></div><p>Mengukur temperatur udara, kelembapan relatif, dan tekanan atmosfer untuk memantau kondisi dasar cuaca.</p><span class="role">SENSOR ATMOSFER</span></article>
+  <article class="card sensor"><div class="sensor-head"><div class="sensor-symbol">🌧️</div><div><h4>Tipping Bucket Rain Gauge</h4><small>Curah hujan</small></div></div><p>Menghitung tip atau jungkit pada ember takar. Jumlah tip dikonversi menjadi curah hujan dalam milimeter sesuai kalibrasi alat.</p><span class="role">SENSOR HUJAN</span></article>
+  <article class="card sensor"><div class="sensor-head"><div class="sensor-symbol">💨</div><div><h4>Anemometer</h4><small>Kecepatan angin</small></div></div><p>Mendeteksi putaran baling-baling/cup untuk memperoleh kecepatan angin. Hasil perlu dikalibrasi terhadap spesifikasi alat.</p><span class="role">SENSOR ANGIN</span></article>
+  <article class="card sensor"><div class="sensor-head"><div class="sensor-symbol">🧭</div><div><h4>Wind Vane</h4><small>Arah angin</small></div></div><p>Menentukan arah datang angin. Pembacaan bergantung pada jenis keluaran vane dan tabel kalibrasi/resistansi yang digunakan.</p><span class="role">SENSOR ARAH ANGIN</span></article>
+  <article class="card sensor"><div class="sensor-head"><div class="sensor-symbol">🌫️</div><div><h4>PMS5003 / Plantower</h4><small>Particulate Matter</small></div></div><p>Mengukur konsentrasi partikel PM1.0, PM2.5, dan PM10 di udara. Ini merupakan pemantauan kualitas udara, bukan sensor cuaca inti.</p><span class="role">KUALITAS UDARA</span></article>
+  <article class="card sensor"><div class="sensor-head"><div class="sensor-symbol">☀️</div><div><h4>BH1750 / GUVA-S12SD</h4><small>Cahaya / indeks UV</small></div></div><p>BH1750 mengukur iluminansi dalam lux. GUVA-S12SD merupakan sensor UV analog; hasilnya perlu rangkaian pembacaan dan kalibrasi tersendiri.</p><span class="role">RADIASI CAHAYA / UV</span></article>
+  <article class="card sensor"><div class="sensor-head"><div class="sensor-symbol">🔌</div><div><h4>MAX485 Transceiver</h4><small>Antarmuka komunikasi RS485</small></div></div><p>Pengubah antarmuka UART ke RS485 untuk komunikasi diferensial dengan perangkat yang mendukung RS485. Bukan sensor pengukur cuaca.</p><span class="role">KOMUNIKASI DATA</span></article>
+ </div>
+</section>
+
+<section class="section">
+ <div class="section-head"><div><h3>Bagaimana sistem bekerja?</h3><p>Alur pengukuran dari lingkungan hingga dashboard</p></div></div>
+ <div class="grid architecture">
+  <article class="card info-card">
+   <h3>Arsitektur stasiun IoT</h3>
+   <p>Sensor mengamati kondisi mikroklimat pada titik pemasangan. ESP32 membaca dan mengemas data untuk dikirim ke server/dashboard melalui jaringan yang tersedia.</p>
+   <div class="flow"><div class="flow-node"><strong>01 · Sensor</strong>Pengukuran</div><span class="flow-arrow">→</span><div class="flow-node"><strong>02 · ESP32</strong>Olah data</div><span class="flow-arrow">→</span><div class="flow-node"><strong>03 · IoT</strong>Kirim data</div><span class="flow-arrow">→</span><div class="flow-node"><strong>04 · Web</strong>Visualisasi</div></div>
+  </article>
+  <article class="card info-card">
+   <h3>Status integrasi perangkat</h3>
+   <div class="status-list">
+    <div class="status-row"><span>Mikrokontroler</span><strong>ESP32 DEVKIT V3</strong></div>
+    <div class="status-row"><span>Transport data</span><strong>HTTP / Wi-Fi (konfigurabel)</strong></div>
+    <div class="status-row"><span>Interval pembaruan</span><strong id="intervalLabel">10 detik (demo)</strong></div>
+    <div class="status-row"><span>Sumber dashboard</span><strong id="sourceLabel">Data simulasi</strong></div>
+    <div class="status-row"><span>Sensor UV</span><strong id="uvValue">Belum ada data</strong></div>
+   </div>
+  </article>
+ </div>
+ <div class="disclaimer"><strong>Catatan keakuratan:</strong> Dashboard ini disiapkan sebagai antarmuka front-end. Saat belum dihubungkan ke endpoint ESP32, angka dan grafik menggunakan data simulasi agar tampilan dapat diuji—bukan hasil pengukuran lapangan. Status akan berubah menjadi LIVE hanya setelah data aktual berhasil diterima dari perangkat. Akurasi bergantung pada pemasangan, interval sampling, kalibrasi, dan kualitas koneksi sensor.</div>
+</section>
+<footer><span>Cisalak Weather Station · by Fakhry Aqila Fikri</span><span>Local observation · ESP32 based · IoT</span></footer>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/*
+  INTEGRASI ESP32:
+  1) Atur CONFIG.endpoint ke URL API milik ESP32/server (mis. http://192.168.1.50/api/weather).
+  2) Endpoint mengembalikan JSON sesuai contoh di bawah.
+  3) Untuk akses lintas perangkat/domain, aktifkan CORS di server dan gunakan HTTPS bila diakses dari internet.
+  4) Jangan tandai data simulasi sebagai real-time. Badge LIVE hanya muncul jika fetch berhasil.
+  Contoh JSON:
+  {
+    "timestamp":"2026-11-01T07:55:00+07:00",
+    "temperature":29.4,"humidity":78,"pressure":1008.6,
+    "rain_today":12.4,"rain_rate":0.8,"wind_speed":2.3,"wind_direction":135,
+    "pm1":5,"pm25":12,"pm10":18,"lux":12500,"uv":2.1,
+    "history":[
+      {"date":"2026-10-26","rain":4.2,"temperature":28.1,"humidity":80},
+      {"date":"2026-10-27","rain":0,"temperature":29.0,"humidity":76}
+    ]
+  }
+  Jika history tidak dikirim, grafik akan memakai data simulasi.
+*/
+const CONFIG={
+ endpoint:"",             // Isi URL endpoint ESP32/server di sini.
+ pollMs:10000,             // Interval polling data aktual.
+ demoWhenOffline:true      // true = tampilkan data simulasi jika endpoint kosong/gagal.
+};
+const $=id=>document.getElementById(id);
+const demoHistoryRain=[8.4,2.1,14.8,0.6,19.2,6.3,11.7,3.2,22.5,0,9.4,16.1,4.7,12.8];
+const demoHistoryDry=[29.1,30.4,31.2,32.0,31.6,33.1,32.4,34.0,33.6,32.8,34.3,35.1,33.8,34.6];
+const demoHumidity=[82,79,85,77,88,81,84,76,89,74,83,86,78,82];
+const demoDates=Array.from({length:14},(_,i)=>{const d=new Date();d.setDate(d.getDate()-13+i);return d.toISOString().slice(0,10)});
+let season="rain",period=7,liveData=null,pollTimer=null;
+let activeHistory=null;
+function toast(msg){$("toast").textContent=msg;$("toast").classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>$("toast").classList.remove("show"),3000)}
+function sampleDemo(){
+ const now=new Date(),h=now.getHours();
+ const temp= h<6?25.8:h<11?29.2:h<15?32.1: h<18?30.0:27.4;
+ return {timestamp:now.toISOString(),temperature:temp+(Math.random()-.5)*.7,humidity:78+Math.round((Math.random()-.5)*8),pressure:1008.4+(Math.random()-.5)*1.8,rain_today:season==="rain"?12.4:0.0,rain_rate:season==="rain"?.3:0,wind_speed:1.8+Math.random()*1.2,wind_direction:135,pm1:5,pm25:12+Math.round(Math.random()*3),pm10:19,lux:h>=6&&h<=17?9500+Math.round(Math.random()*3500):120,uv:h>=9&&h<=15?2.1:0.1};
+}
+function setMetric(id,value,unit){$(id).innerHTML=`${value}<span class="metric-unit">${unit}</span>`}
+function updateCards(d,isLive){
+ setMetric("temperature",Number(d.temperature).toFixed(1),"°C");
+ setMetric("humidity",Math.round(d.humidity),"%");
+ setMetric("pressure",Number(d.pressure).toFixed(1),"hPa");
+ setMetric("rainToday",Number(d.rain_today).toFixed(1),"mm");
+ setMetric("windSpeed",Number(d.wind_speed).toFixed(1),"m/s");
+ setMetric("windDirection",Math.round(d.wind_direction),"°");
+ setMetric("pm25",d.pm25==null?"—":Number(d.pm25).toFixed(0),"µg/m³");
+ setMetric("lux",d.lux==null?"—":Math.round(d.lux),"lux");
+ $("uvValue").textContent=d.uv==null?"Belum ada data":Number(d.uv).toFixed(1);
+ $("lastUpdate").textContent="UPDATE "+new Date(d.timestamp||Date.now()).toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
+ $("sampleAge").textContent=isLive?"DATA SENSOR AKTUAL":"DATA SIMULASI";
+ $("connectionLabel").textContent=isLive?"LIVE · ESP32":"MODE DEMO";
+ $("statusDot").classList.toggle("live",isLive);
+ $("sourceLabel").textContent=isLive?"Endpoint perangkat IoT":"Data simulasi lokal";
+}
+function makeHistory(d){
+ if(Array.isArray(d.history)&&d.history.length){
+  return d.history.slice(-14).map(x=>({date:x.date,rain:Number(x.rain||0),temperature:Number(x.temperature??d.temperature),humidity:Number(x.humidity??d.humidity)}));
+ }
+ return demoDates.map((date,i)=>({date,rain:demoHistoryRain[i],temperature:demoHistoryDry[i],humidity:demoHumidity[i]}));
+}
+function drawChart(canvasId,labels,values,color,unit,kind="line"){
+ const canvas=$(canvasId),rect=canvas.getBoundingClientRect(),ratio=window.devicePixelRatio||1;
+ if(!rect.width||!rect.height)return;
+ canvas.width=rect.width*ratio;canvas.height=rect.height*ratio;
+ const ctx=canvas.getContext("2d");ctx.scale(ratio,ratio);
+ const w=rect.width,h=rect.height,p={l:34,r:12,t:15,b:28},cw=w-p.l-p.r,ch=h-p.t-p.b;
+ const max=Math.max(1,...values)*1.18,min=0;
+ ctx.clearRect(0,0,w,h);ctx.font="10px DM Sans";ctx.textBaseline="middle";
+ for(let i=0;i<4;i++){const y=p.t+ch*i/3;ctx.strokeStyle="rgba(180,220,230,.12)";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(p.l,y);ctx.lineTo(w-p.r,y);ctx.stroke();ctx.fillStyle="#7899a8";ctx.textAlign="right";ctx.fillText((max-(max-min)*i/3).toFixed(kind==="bar"?0:1),p.l-8,y)}
+ const pts=values.map((v,i)=>({x:p.l+(values.length===1?cw/2:cw*i/(values.length-1)),y:p.t+ch-(v-min)/(max-min)*ch,v}));
+ if(kind==="bar"){
+  const slot=cw/values.length,bw=Math.min(24,slot*.56);
+  pts.forEach((pt,i)=>{const bh=Math.max(2,(pt.v/max)*ch);const grad=ctx.createLinearGradient(0,pt.y,0,p.t+ch);grad.addColorStop(0,color);grad.addColorStop(1,color+"33");ctx.fillStyle=grad;roundRect(ctx,pt.x-bw/2,pt.y,bw,bh,6);ctx.fill();});
+ }else{
+  const grad=ctx.createLinearGradient(0,p.t,0,p.t+ch);grad.addColorStop(0,color+"45");grad.addColorStop(1,color+"00");
+  ctx.beginPath();pts.forEach((pt,i)=>i?ctx.lineTo(pt.x,pt.y):ctx.moveTo(pt.x,pt.y));ctx.lineTo(pts[pts.length-1].x,p.t+ch);ctx.lineTo(pts[0].x,p.t+ch);ctx.closePath();ctx.fillStyle=grad;ctx.fill();
+  ctx.beginPath();pts.forEach((pt,i)=>i?ctx.lineTo(pt.x,pt.y):ctx.moveTo(pt.x,pt.y));ctx.strokeStyle=color;ctx.lineWidth=2.5;ctx.lineJoin="round";ctx.lineCap="round";ctx.stroke();
+  pts.forEach(pt=>{ctx.beginPath();ctx.arc(pt.x,pt.y,3,0,Math.PI*2);ctx.fillStyle="#eaffff";ctx.fill();ctx.beginPath();ctx.arc(pt.x,pt.y,5,0,Math.PI*2);ctx.strokeStyle=color;ctx.lineWidth=1.5;ctx.stroke()});
+ }
+ pts.forEach((pt,i)=>{if(i%(values.length>7?2:1)===0||i===values.length-1){ctx.fillStyle="#8daab6";ctx.textAlign="center";const d=new Date(labels[i]+"T12:00:00");ctx.fillText(d.toLocaleDateString("id-ID",{day:"2-digit",month:"short"}),pt.x,h-10)}});
+}
+function roundRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
+function renderCharts(history){
+ const rows=history.slice(-period),labels=rows.map(x=>x.date);
+ const main=season==="rain"?rows.map(x=>x.rain):rows.map(x=>Math.max(0,x.temperature-25));
+ const secondary=season==="rain"?rows.map(x=>x.humidity):rows.map(x=>x.temperature);
+ $("chartTitle").textContent=season==="rain"?"Curah hujan harian":"Indikator panas / kering harian";
+ $("chartSubtitle").textContent=season==="rain"?"Akumulasi hujan per hari · mm":"Indikator panas: suhu di atas 25°C · °C";
+ $("mainLegend").textContent=season==="rain"?"Curah hujan (mm)":"Indikator panas (°C di atas 25)";
+ $("mainLegendDot").style.background=season==="rain"?"#62d7d0":"#ffc979";
+ $("seasonNote").textContent=season==="rain"?"Musim hujan: grafik memperlihatkan akumulasi curah hujan harian dari tipping bucket rain gauge. Nilai idealnya berasal dari total tip yang sudah dikalibrasi dalam mm.":"Musim kemarau: grafik memperlihatkan indikator panas harian (suhu udara dikurangi 25°C sebagai skala visual), bukan indeks kekeringan resmi. Pantau suhu, kelembapan, dan hujan untuk membaca kondisi kering.";
+ $("secondaryLegend").textContent=season==="rain"?"Kelembapan relatif (%)":"Suhu udara (°C)";
+ $("secondaryUnit").textContent=season==="rain"?"%":"°C";
+ $("secondaryNote").textContent=season==="rain"?"Kelembapan relatif membantu membaca kondisi udara selama periode hujan.":"Suhu harian ditampilkan untuk membantu mengamati tren panas selama periode kemarau.";
+ drawChart("mainChart",labels,main,season==="rain"?"#62d7d0":"#ffc979","", "bar");
+ drawChart("secondaryChart",labels,secondary,season==="rain"?"#74bdf4":"#ffc979","", "line");
+}
+function setSeason(value){
+ season=value;$("rainMode").classList.toggle("active",value==="rain");$("dryMode").classList.toggle("active",value==="dry");
+ if(activeHistory)renderCharts(activeHistory);
+}
+async function refresh(){
+ if(!CONFIG.endpoint){
+  if(CONFIG.demoWhenOffline){const d=sampleDemo();updateCards(d,false);activeHistory=makeHistory(d);renderCharts(activeHistory);$("intervalLabel").textContent="10 detik (demo)";return}
+  toast("Endpoint ESP32 belum dikonfigurasi.");return;
+ }
+ try{
+  const response=await fetch(CONFIG.endpoint,{cache:"no-store"});
+  if(!response.ok)throw new Error("HTTP "+response.status);
+  const d=await response.json();
+  const required=["temperature","humidity","pressure","rain_today","wind_speed","wind_direction"];
+  const missing=required.filter(k=>d[k]===undefined);
+  if(missing.length)throw new Error("Field JSON belum lengkap: "+missing.join(", "));
+  liveData=d;updateCards(d,true);activeHistory=makeHistory(d);renderCharts(activeHistory);
+  $("intervalLabel").textContent=(CONFIG.pollMs/1000)+" detik";toast("Data aktual ESP32 berhasil diterima.");
+ }catch(err){
+  $("connectionLabel").textContent="KONEKSI TERPUTUS";$("statusDot").classList.remove("live");
+  $("sourceLabel").textContent="Gagal menerima data";$("sampleAge").textContent="DATA TIDAK TERBARUI";
+  toast("Gagal mengambil data perangkat: "+err.message);
+  if(CONFIG.demoWhenOffline){const d=sampleDemo();updateCards(d,false);activeHistory=makeHistory(d);renderCharts(activeHistory)}
+ }
+}
+$("rainMode").addEventListener("click",()=>setSeason("rain"));
+$("dryMode").addEventListener("click",()=>setSeason("dry"));
+$("periodSelect").addEventListener("change",e=>{period=Number(e.target.value);if(activeHistory)renderCharts(activeHistory)});
+$("refreshBtn").addEventListener("click",refresh);
+let resizeTimer;window.addEventListener("resize",()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>activeHistory&&renderCharts(activeHistory),120)});
+
+// ANIMASI ATMOSFER CUACA — canvas responsif, interaktif, dan ringan.
+const weatherCanvas=$("weatherCanvas");
+const weatherCtx=weatherCanvas.getContext("2d");
+let weatherMode="rain",weatherPaused=false,weatherFrame=0,lastFrame=0,particles=[],clouds=[];
+const reduceMotion=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const rand=(a,b)=>a+Math.random()*(b-a);
+function resizeWeather(){
+ const r=$("weatherHero").getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,2);
+ weatherCanvas.width=Math.max(1,Math.floor(r.width*dpr));
+ weatherCanvas.height=Math.max(1,Math.floor(r.height*dpr));
+ weatherCtx.setTransform(dpr,0,0,dpr,0,0);
+ const w=r.width,h=r.height;
+ clouds=Array.from({length:6},(_,i)=>({x:rand(-80,w),y:rand(35,h*.78),s:rand(.65,1.55),speed:rand(.08,.24),alpha:rand(.045,.12)}));
+ resetParticles();
+}
+function resetParticles(){
+ const r=$("weatherHero").getBoundingClientRect(),w=r.width,h=r.height;
+ const count=weatherMode==="storm"?150:weatherMode==="rain"?95:weatherMode==="windy"?55:weatherMode==="sunny"?32:45;
+ particles=Array.from({length:count},()=>({x:rand(0,w),y:rand(0,h),z:rand(.45,1.5),r:rand(1,3),phase:rand(0,Math.PI*2)}));
+}
+function setWeatherMode(mode){
+ weatherMode=mode;resetParticles();
+ document.querySelectorAll(".weather-btn[data-weather]").forEach(b=>b.classList.toggle("active",b.dataset.weather===mode));
+ const descriptions={rain:"Animasi hujan aktif",storm:"Mode badai aktif — visual petir",sunny:"Mode cerah aktif — sinar matahari",cloudy:"Mode berawan aktif",windy:"Mode angin aktif"};
+ toast(descriptions[mode]);
+}
+function drawCloud(ctx,x,y,s,a){
+ ctx.save();ctx.globalAlpha=a;ctx.fillStyle="#b7dce0";
+ ctx.beginPath();ctx.ellipse(x,y,47*s,17*s,0,0,Math.PI*2);ctx.ellipse(x-22*s,y-9*s,24*s,21*s,0,0,Math.PI*2);ctx.ellipse(x+5*s,y-17*s,29*s,27*s,0,0,Math.PI*2);ctx.ellipse(x+31*s,y-5*s,23*s,19*s,0,0,Math.PI*2);ctx.fill();ctx.restore();
+}
+function animateWeather(ts){
+ requestAnimationFrame(animateWeather);
+ if(weatherPaused||reduceMotion)return;
+ if(ts-lastFrame<28)return;lastFrame=ts;
+ const rect=$("weatherHero").getBoundingClientRect(),w=rect.width,h=rect.height;
+ const ctx=weatherCtx;ctx.clearRect(0,0,w,h);weatherFrame++;
+ // Awan berlapis bergerak pelan.
+ clouds.forEach(c=>{c.x+=c.speed*(weatherMode==="windy"?2.8:1);if(c.x> w+100)c.x=-100;drawCloud(ctx,c.x,c.y,c.s,c.alpha)});
+ // Matahari dan halo.
+ if(weatherMode==="sunny"||weatherMode==="cloudy"){
+  const sx=w*.82,sy=h*.25;
+  const glow=ctx.createRadialGradient(sx,sy,4,sx,sy,weatherMode==="sunny"?105:65);
+  glow.addColorStop(0,"rgba(255,215,137,.32)");glow.addColorStop(1,"rgba(255,215,137,0)");
+  ctx.fillStyle=glow;ctx.fillRect(sx-110,sy-110,220,220);
+  if(weatherMode==="sunny"){ctx.beginPath();ctx.arc(sx,sy,24+Math.sin(ts/700)*2,0,Math.PI*2);ctx.fillStyle="#ffd58b";ctx.shadowBlur=28;ctx.shadowColor="#ffc979";ctx.fill();ctx.shadowBlur=0}
+ }
+ // Hujan: garis miring dengan kedalaman berbeda.
+ if(weatherMode==="rain"||weatherMode==="storm"){
+  ctx.lineWidth=1;
+  particles.forEach(p=>{p.y+=8*p.z*(weatherMode==="storm"?1.65:1);p.x-=2.3*p.z;
+   if(p.y>h){p.y=-12;p.x=rand(0,w)}if(p.x< -12)p.x=w+10;
+   ctx.strokeStyle=weatherMode==="storm"?"rgba(177,222,255,.65)":"rgba(151,220,239,.48)";
+   ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(p.x-4*p.z,p.y+13*p.z);ctx.stroke();
+  });
+ }
+ // Partikel angin berupa garis pendek horizontal.
+ if(weatherMode==="windy"){
+  particles.forEach(p=>{p.x-=5*p.z;if(p.x< -50){p.x=w+30;p.y=rand(0,h)}
+   ctx.strokeStyle="rgba(173,229,239,.5)";ctx.lineWidth=1.3;
+   ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.quadraticCurveTo(p.x+13,p.y-4,p.x+30*p.z,p.y);ctx.stroke();
+  });
+ }
+ // Debu/polen halus saat cerah dan berawan.
+ if(weatherMode==="sunny"||weatherMode==="cloudy"){
+  particles.forEach(p=>{p.y-=.25*p.z;p.x+=Math.sin(ts/900+p.phase)*.35;if(p.y<0)p.y=h;
+   ctx.beginPath();ctx.arc(p.x,p.y,p.r*.65,0,Math.PI*2);ctx.fillStyle="rgba(255,225,164,.45)";ctx.fill();
+  });
+ }
+ // Kilatan petir sesekali pada mode badai.
+ if(weatherMode==="storm"&&Math.random()<.009){
+  ctx.fillStyle="rgba(205,235,255,.16)";ctx.fillRect(0,0,w,h);
+  ctx.beginPath();ctx.moveTo(w*.72,0);ctx.lineTo(w*.68,h*.24);ctx.lineTo(w*.73,h*.22);ctx.lineTo(w*.65,h*.48);
+  ctx.strokeStyle="rgba(218,242,255,.95)";ctx.lineWidth=3;ctx.shadowBlur=22;ctx.shadowColor="#bce8ff";ctx.stroke();ctx.shadowBlur=0;
+ }
+}
+document.querySelectorAll(".weather-btn[data-weather]").forEach(b=>b.addEventListener("click",()=>setWeatherMode(b.dataset.weather)));
+$("pauseWeather").addEventListener("click",()=>{
+ weatherPaused=!weatherPaused;
+ $("pauseWeather").textContent=weatherPaused?"▶ Lanjutkan":"Ⅱ Jeda";
+ if(weatherPaused){weatherCtx.clearRect(0,0,weatherCanvas.width,weatherCanvas.height)}
+ else lastFrame=0;
+});
+window.addEventListener("resize",resizeWeather);
+resizeWeather();requestAnimationFrame(animateWeather);
+
+setSeason("rain");refresh();
+if(CONFIG.endpoint)pollTimer=setInterval(refresh,CONFIG.pollMs);
+else pollTimer=setInterval(()=>{if(CONFIG.demoWhenOffline){const d=sampleDemo();updateCards(d,false)}},CONFIG.pollMs);
+</script>
+</body>
+</html>
